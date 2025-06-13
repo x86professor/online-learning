@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Online Learning Platform</title>
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+<style>
+</style>
+</head>
+<body>
+<div class="app-container">
+  <header role="banner">
+    <div class="header-inner">
+      <button class="hamburger-btn" aria-label="Toggle menu" aria-expanded="false" aria-controls="sidebar" id="hamburger-btn" tabindex="0">
+        <span class="material-icons">menu</span>
+      </button>
+      <div class="logo" aria-label="Online Learning Platform Logo">LearnOnline</div>
+      <nav class="header-nav" aria-label="User controls">
+        <span id="user-email" style="font-weight:600; color: var(--color-text-primary); user-select:none;"></span>
+        <button class="btn btn-primary" id="login-btn" aria-haspopup="dialog" aria-controls="auth-modal">Log In</button>
+        <button class="btn btn-secondary" id="logout-btn" style="display:none;">Log Out</button>
+      </nav>
+      <div class="breadcrumb" aria-label="Breadcrumb navigation" id="breadcrumb" hidden>
+        Home
+      </div>
+    </div>
+  </header>
+
+  <nav id="sidebar" class="sidebar" aria-label="Course Lessons" tabindex="-1" hidden>
+    <div class="user-progress" aria-live="polite" id="progress-summary">
+      Progress: 0 / 0 lessons completed
+    </div>
+    <ul class="lesson-list" id="lesson-list">
+      <!-- Lessons inserted by JS -->
+    </ul>  
+  </nav>
+
+  <main id="main-content" role="main" tabindex="-1">
+    <section class="content-area" id="content-area" hidden>
+      <div class="video-player" aria-label="Lesson Video Player">
+        <video id="lesson-video" controls preload="metadata" tabindex="0" aria-describedby="video-description" >
+          <source id="video-source" src="" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      <div class="quiz-section" id="quiz-section" aria-live="polite" tabindex="0" hidden>
+        <div class="quiz-question" id="quiz-question"></div>
+        <ul class="quiz-options" id="quiz-options" role="list" aria-label="Quiz options">
+          <!-- Quiz options inserted by JS -->
+        </ul>
+        <div class="quiz-feedback" id="quiz-feedback" aria-live="assertive"></div>
+      </div>
+    </section>
+    <section id="welcome-section" style="text-align:center; padding: var(--spacing-lg); color: var(--color-text-primary);">
+      <h1 style="font-weight:800; font-size:2rem; margin-bottom: var(--spacing-md);">Welcome to LearnOnline</h1>
+      <p style="font-weight:500; font-size:1rem; max-width:400px; margin: 0 auto 32px auto;">
+        Please log in to access your courses, watch video lessons, take quizzes, and track your progress.
+      </p>
+      <button class="btn btn-primary" id="welcome-login-btn">Log In</button>
+    </section>
+  </main>
+</div>
+
+<!-- Authentication Modal -->
+<div id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-desc" hidden style="position:fixed; z-index:2000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center;">
+  <div style="background: white; border-radius: var(--border-radius); padding: var(--spacing-lg); max-width: 360px; width: 90%; box-shadow: 0 4px 10px rgba(0,0,0,0.15); position: relative;">
+    <h2 id="auth-title" style="font-weight:800; font-size:1.5rem; margin-bottom: var(--spacing-md); color: var(--color-text-primary);">User Login</h2>
+    <p id="auth-desc" style="color: var(--color-text-secondary); margin-bottom: var(--spacing-md); font-size: 0.9rem;">Enter your email and password to access your account or create a new one.</p>
+    <form id="auth-form" autocomplete="off">
+      <label for="email-input" style="display:block; font-weight:600; margin-bottom:4px; color: var(--color-text-primary);">Email</label>
+      <input type="email" id="email-input" required style="width:100%; padding:8px; margin-bottom:16px; font-size: 1rem; border:1px solid #d1d5db; border-radius: var(--border-radius);" />
+      <label for="password-input" style="display:block; font-weight:600; margin-bottom:4px; color: var(--color-text-primary);">Password</label>
+      <input type="password" id="password-input" required minlength="6" autocomplete="new-password" style="width:100%; padding:8px; margin-bottom:24px; font-size: 1rem; border:1px solid #d1d5db; border-radius: var(--border-radius);" />
+      <div style="display:flex; justify-content: space-between; align-items: center; gap: 16px;">
+        <button type="submit" class="btn btn-primary" style="flex-grow:1;">Log In</button>
+        <button type="button" id="auth-cancel-btn" class="btn btn-secondary" style="flex-grow:1;">Cancel</button>
+      </div>
+    </form>
+    <p style="font-size: 0.9rem; color: var(--color-text-secondary); margin-top: var(--spacing-md); user-select:none;">* This is a demo login. Your info is stored locally only.</p>
+  </div>
+</div>
+
+<script>
+  (() => {
+    'use strict';
+    // Sample lesson data
+    const lessons = [
+      {
+        id: 'lesson1',
+        title: 'Introduction to Online Learning',
+        videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        quiz: {
+          question: 'What is the main benefit of online learning?',
+          options: [
+            { text: 'Flexibility to learn anytime', correct: true },
+            { text: 'Requires physical presence', correct: false },
+            { text: 'Limited course options', correct: false },
+            { text: 'Expensive compared to traditional', correct: false }
+          ]
+        }
+      },
+      {
+        id: 'lesson2',
+        title: 'How to Succeed in Online Classes',
+        videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+        quiz: {
+          question: 'Which habit contributes most to success in online learning?',
+          options: [
+            { text: 'Regularly attending and engaging', correct: true },
+            { text: 'Ignoring deadlines', correct: false },
+            { text: 'Multitasking without focus', correct: false },
+            { text: 'Procrastinating', correct: false }
+          ]
+        }
+      },
+      {
+        id: 'lesson3',
+        title: 'Using Learning Tools Effectively',
+        videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+        quiz: {
+          question: 'What is important when using online learning tools?',
+          options: [
+            { text: 'Consistent practice and exploration', correct: true },
+            { text: 'Avoiding available resources', correct: false },
+            { text: 'Using tools only during exams', correct: false },
+            { text: 'Ignoring tutorials and guides', correct: false }
+          ]
+        }
+      }
+    ];
+
+    // User auth and progress states
+    let currentUser = null; // Will hold {email, progress}
+    let currentLessonId = null;
+    let quizAnswered = false;
+
+    // DOM elements
+    const lessonListEl = document.getElementById('lesson-list');
+    const videoEl = document.getElementById('lesson-video');
+    const videoSourceEl = document.getElementById('video-source');
+    const quizSectionEl = document.getElementById('quiz-section');
+    const quizQuestionEl = document.getElementById('quiz-question');
+    const quizOptionsEl = document.getElementById('quiz-options');
+    const quizFeedbackEl = document.getElementById('quiz-feedback');
+    const sidebarEl = document.getElementById('sidebar');
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const breadcrumbEl = document.getElementById('breadcrumb');
+    const mainContentEl = document.getElementById('main-content');
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userEmailEl = document.getElementById('user-email');
+    const authModal = document.getElementById('auth-modal');
+    const authForm = document.getElementById('auth-form');
+    const authCancelBtn = document.getElementById('auth-cancel-btn');
+    const welcomeSection = document.getElementById('welcome-section');
+    const welcomeLoginBtn = document.getElementById('welcome-login-btn');
+    const progressSummaryEl = document.getElementById('progress-summary');
+
+    // Helpers
+    function saveUsers(users) {
+      localStorage.setItem('learnUsers', JSON.stringify(users));
+    }
+    function loadUsers() {
+      const usersJson = localStorage.getItem('learnUsers');
+      if (!usersJson) return [];
+      try {
+        return JSON.parse(usersJson);
+      } catch {
+        return [];
+      }
+    }
+    function getUser(email) {
+      const users = loadUsers();
+      return users.find(u => u.email === email) || null;
+    }
+    function setUser(user) {
+      if (!user) return;
+      let users = loadUsers();
+      const idx = users.findIndex(u => u.email === user.email);
+      if (idx >= 0) users[idx] = user;
+      else users.push(user);
+      saveUsers(users);
+    }
+
+    // Progress tracking
+    function getProgress(user) {
+      return user.progress || {};
+    }
+    function setProgress(user, lessonId, completedQuiz) {
+      const progress = getProgress(user);
+      progress[lessonId] = completedQuiz ? 'completed' : 'viewed';
+      user.progress = progress;
+      setUser(user);
+    }
+    function getCompletedCount(user) {
+      const progress = getProgress(user);
+      return Object.values(progress).filter(v => v === 'completed').length;
+    }
+
+    // Render lessons in sidebar
+    function renderLessonList() {
+      lessonListEl.innerHTML = '';
+      if (!currentUser) {
+        lessonListEl.innerHTML = '<li style="font-weight:600;color:var(--color-text-secondary); user-select:none;">Log in to access lessons.</li>';
+        progressSummaryEl.textContent = 'Progress: 0 / 0 lessons completed';
+        return;
+      }
+      const progress = getProgress(currentUser);
+      lessons.forEach(lesson => {
+        const li = document.createElement('li');
+        li.tabIndex = 0;
+        li.className = 'lesson-item';
+        if (lesson.id === currentLessonId) {
+          li.classList.add('active');
+        }
+        li.setAttribute('role', 'button');
+        li.setAttribute('aria-pressed', lesson.id === currentLessonId ? 'true' : 'false');
+        li.innerHTML = `
+          <span>${lesson.title}</span>
+          <span class="lesson-status" aria-label="Lesson completion status">${progress[lesson.id] === 'completed' ? '✓' : ''}</span>
+        `;
+        li.addEventListener('click', () => loadLesson(lesson.id));
+        li.addEventListener('keydown', e => {
+          if(e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            loadLesson(lesson.id);
+          }
+        });
+        lessonListEl.appendChild(li);
+      });
+      const completed = getCompletedCount(currentUser);
+      progressSummaryEl.textContent = `Progress: ${completed} / ${lessons.length} lessons completed`;
+    }
+
+    // Load lesson by id
+    function loadLesson(id) {
+      const lesson = lessons.find(l => l.id === id);
+      if (!lesson) return;
+      currentLessonId = id;
+      quizAnswered = false;
+      // Update video src and load
+      videoSourceEl.src = lesson.videoUrl;
+      videoEl.load();
+      videoEl.focus();
+      quizFeedbackEl.textContent = '';
+      quizSectionEl.hidden = false;
+      mainContentEl.querySelector('#welcome-section').hidden = true;
+      mainContentEl.querySelector('.content-area').hidden = false;
+      hamburgerBtn.setAttribute('aria-expanded', 'false');
+      sidebarEl.classList.remove('open');
+
+      // Render quiz
+      renderQuiz(lesson.quiz);
+
+      // Update sidebar highlight and progress summary
+      renderLessonList();
+
+      // Update breadcrumb on mobile
+      updateBreadcrumb(lesson.title);
+    }
+
+    // Render quiz questions and options
+    function renderQuiz(quiz) {
+      quizQuestionEl.textContent = quiz.question;
+      quizOptionsEl.innerHTML = '';
+      quizFeedbackEl.textContent = '';
+      quizSectionEl.hidden = false;
+      quizAnswered = false;
+
+      quiz.options.forEach((opt, index) => {
+        const li = document.createElement('li');
+        li.className = 'quiz-option';
+        li.tabIndex = 0;
+        li.setAttribute('role', 'button');
+        li.setAttribute('aria-pressed', 'false');
+        li.textContent = opt.text;
+        li.dataset.correct = opt.correct ? 'true' : 'false';
+        li.addEventListener('click', () => handleQuizAnswer(li));
+        li.addEventListener('keydown', e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleQuizAnswer(li);
+          }
+        });
+        quizOptionsEl.appendChild(li);
+      });
+    }
+
+    // Handle selecting a quiz answer
+    function handleQuizAnswer(selectedOption) {
+      if (quizAnswered) return;
+      quizAnswered = true;
+      const correct = selectedOption.dataset.correct === 'true';
+      Array.from(quizOptionsEl.children).forEach(optEl => {
+        optEl.classList.remove('correct', 'incorrect');
+        optEl.setAttribute('aria-pressed', 'false');
+        optEl.style.cursor = 'default';
+        optEl.style.pointerEvents = 'none';
+        if (optEl.dataset.correct === 'true') {
+          optEl.classList.add('correct');
+          optEl.setAttribute('aria-pressed', 'true');
+        }
+      });
+      if (correct) {
+        quizFeedbackEl.textContent = 'Correct! Well done.';
+        quizFeedbackEl.className = 'quiz-feedback correct';
+        // Mark progress completed for this lesson
+        if (currentUser) {
+          setProgress(currentUser, currentLessonId, true);
+          renderLessonList();
+        }
+      } else {
+        selectedOption.classList.add('incorrect');
+        quizFeedbackEl.textContent = 'Incorrect. Try again after watching the video.';
+        quizFeedbackEl.className = 'quiz-feedback incorrect';
+      }
+    }
+
+    // Update breadcrumb on mobile
+    function updateBreadcrumb(lessonTitle) {
+      if (!lessonTitle) {
+        breadcrumbEl.textContent = 'Home';
+        breadcrumbEl.hidden = true;
+      } else {
+        breadcrumbEl.textContent = `Home > ${lessonTitle}`;
+        breadcrumbEl.hidden = false;
+      }
+    }
+
+    // Authentication handling
+    function openAuthModal() {
+      authModal.hidden = false;
+      authModal.querySelector('#email-input').focus();
+      document.body.style.overflow = 'hidden';
+    }
+    function closeAuthModal() {
+      authModal.hidden = true;
+      document.body.style.overflow = '';
+      loginBtn.focus();
+    }
+    function login(email, password) {
+      if (!email || !password) return false;
+      let user = getUser(email);
+      if (!user) {
+        // Create new user
+        user = { email, password, progress: {} };
+        setUser(user);
+      } else if (user.password !== password) {
+        alert('Incorrect password.');
+        return false;
+      }
+      currentUser = user;
+      userEmailEl.textContent = currentUser.email;
+      loginBtn.style.display = 'none';
+      logoutBtn.style.display = '';
+      welcomeSection.hidden = true;
+      mainContentEl.querySelector('.content-area').hidden = false;
+      sidebarEl.hidden = false;
+      updateBreadcrumb(null);
+      renderLessonList();
+      closeAuthModal();
+      // Load first lesson automatically
+      loadLesson(lessons[0].id);
+      return true;
+    }
+    function logout() {
+      currentUser = null;
+      currentLessonId = null;
+      quizAnswered = false;
+      userEmailEl.textContent = '';
+      loginBtn.style.display = '';
+      logoutBtn.style.display = 'none';
+      welcomeSection.hidden = false;
+      mainContentEl.querySelector('.content-area').hidden = true;
+      sidebarEl.hidden = true;
+      lessonListEl.innerHTML = '';
+      progressSummaryEl.textContent = 'Progress: 0 / 0 lessons completed';
+      updateBreadcrumb(null);
+    }
+
+    // Sidebar toggle for mobile
+    function toggleSidebar() {
+      const isOpen = sidebarEl.classList.toggle('open');
+      hamburgerBtn.setAttribute('aria-expanded', isOpen.toString());
+      if (isOpen) {
+        sidebarEl.focus();
+      } else {
+        hamburgerBtn.focus();
+      }
+    }
+
+    // Accessible trap focus in modal
+    function trapFocus(element) {
+      const focusableElements = element.querySelectorAll(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstFocusable = focusableElements[0];
+      const lastFocusable = focusableElements[focusableElements.length -1];
+
+      element.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+          if (e.shiftKey) /* shift+tab */ {
+            if (document.activeElement === firstFocusable) {
+              e.preventDefault();
+              lastFocusable.focus();
+            }
+          } else /* tab */ {
+            if (document.activeElement === lastFocusable) {
+              e.preventDefault();
+              firstFocusable.focus();
+            }
+          }
+        }
+        if (e.key === 'Escape') {
+          closeAuthModal();
+        }
+      });
+    }
+
+    // Initialize
+    function init() {
+      sidebarEl.hidden = true;
+      mainContentEl.querySelector('.content-area').hidden = true;
+      updateBreadcrumb(null);
+
+      trapFocus(authModal);
+
+      // Event listeners
+      hamburgerBtn.addEventListener('click', toggleSidebar);
+
+      loginBtn.addEventListener('click', openAuthModal);
+      welcomeLoginBtn.addEventListener('click', openAuthModal);
+      logoutBtn.addEventListener('click', logout);
+      authCancelBtn.addEventListener('click', closeAuthModal);
+      authModal.addEventListener('click', (e) => {
+        if (e.target === authModal) closeAuthModal();
+      });
+      authForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = authForm.email.value.trim().toLowerCase();
+        const password = authForm.password.value;
+        if (!email || !password) {
+          alert('Please enter email and password.');
+          return;
+        }
+        login(email, password);
+        authForm.reset();
+      });
+
+      // Keyboard accessibility: Close sidebar on ESC
+      sidebarEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          sidebarEl.classList.remove('open');
+          hamburgerBtn.setAttribute('aria-expanded', 'false');
+          hamburgerBtn.focus();
+        }
+      });
+
+      // On window resize, close mobile sidebar if desktop
+      window.addEventListener('resize', () => {
+        if (window.innerWidth >= 768) {
+          if (sidebarEl.classList.contains('open')) {
+            sidebarEl.classList.remove('open');
+            hamburgerBtn.setAttribute('aria-expanded', 'false');
+          }
+        }
+      });
+    }
+
+    // Run init on DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', init);
+  })();
+</script>
+</body>
+</html>
+
